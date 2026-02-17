@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✶</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <div class="board">
+
+        <!-- Mobile Warning -->
+        <div class="mobile-warning">
+            <div class="tape"></div>
+            <p style="margin: 0; line-height: 1.3;">check this site on desktop for a better experience ;)</p>
+        </div>
+
+        <!-- Polaroid -->
+        <div class="deco polaroid" id="polaroid">
+            <div class="pin" id="pin-polaroid"></div>
+            <img src="assets/spaday.png" alt="Spa Day">
+            <div class="polaroid-caption">Spa '25</div>
+        </div>
+
+        <!-- Cutie Marks -->
+        <img src="assets/cutiemark.svg" class="cutiemark cm-1" alt="Star">
+        <img src="assets/cutiemark.svg" class="cutiemark cm-2" alt="Star">
+        <img src="assets/cutiemark.svg" class="cutiemark cm-3" alt="Star">
+
+        <!-- Main Content -->
+        <div class="main-paper">
+            <div class="tape-corner tape-tl"></div>
+            <div class="tape-corner tape-tr"></div>
+
+            <div class="pin" id="pin-main"></div>
+
+            <h1>twi ✶</h1>
+            <div class="subtitle">she/her</div>
+
+            <p>
+                Hi there! <span class="highlight-purple">Twilight Sparkle</span> here. I'm a Computer Science major at
+                <b>UE Canterlot</b>. I like to tinker with stuff! especially electronics haha. I'm also a big fan of
+                Williams Racing! (as you can probably already tell...)
+            </p>
+
+            <div class="links">
+                <a href="https://www.x.com/twilysprkle" class="btn">Twitter</a>
+            </div>
+
+        </div>
+
+        <!-- Mobile Notes Wrapper -->
+        <div class="mobile-notes-wrapper">
+            <!-- Interests -->
+            <div class="sticky-note-2" id="sticky-note-2">
+                <div class="pin" id="pin-sticky-2"></div>
+                <b>INTERESTS:</b><br>
+                <br>
+                ★ Science. and oh! spacey stuff.<br>
+                ★ Going to the movies<br>
+                ★ Formula 1 (go weeyums!!)<br>
+                ★ Coding weird websites (such as this one...)<br>
+            </div>
+
+            <!-- DNI -->
+            <div class="sticky-note" id="sticky-note">
+                <div class="pin" id="pin-sticky"></div>
+                <b>DNI IF:</b><br>
+                <br>
+                - Basic DNI criteria<br>
+                - You slander Latifi<br>
+                - That's literally it.<br>
+                <br>
+            </div>
+        </div>
+
+        <!-- Williams Sticker -->
+        <div class="deco sticker-williams">
+            <img src="assets/WilliamsF1_2026-AWwhite.svg" alt="Williams Racing">
+        </div>
+
+    </div>
+
+    <script>
+        window.addEventListener('load', () => {
+            if (window.innerWidth <= 768) return;
+
+            const board = document.querySelector('.board');
+            const obstacles = [
+                document.querySelector('.polaroid'),
+                document.querySelector('.main-paper'),
+                document.querySelector('.sticky-note'),
+                document.querySelector('.sticky-note-2'),
+                document.querySelector('.sticker-williams')
+            ];
+            const stars = Array.from(document.querySelectorAll('.cutiemark'));
+            const placedRects = [];
+
+            obstacles.forEach(el => {
+                if (el) placedRects.push(el.getBoundingClientRect());
+            });
+
+            const boardRect = board.getBoundingClientRect();
+
+            function isOverlapping(rect1, rect2) {
+                return !(rect1.right < rect2.left ||
+                    rect1.left > rect2.right ||
+                    rect1.bottom < rect2.top ||
+                    rect1.top > rect2.bottom);
+            }
+
+            stars.forEach(star => {
+                let placed = false;
+                let attempts = 0;
+                const maxAttempts = 1500;
+
+                star.style.bottom = 'auto';
+                star.style.right = 'auto';
+                star.style.position = 'absolute';
+
+                const starWidth = star.offsetWidth || 50;
+                const starHeight = star.offsetHeight || 50;
+
+                while (!placed && attempts < maxAttempts) {
+                    const padding = 20;
+                    const rX = Math.random() * (boardRect.width - starWidth - 2 * padding) + padding;
+                    const rY = Math.random() * (boardRect.height - starHeight - 2 * padding) + padding;
+
+                    const candidateRect = {
+                        left: boardRect.left + rX,
+                        top: boardRect.top + rY,
+                        right: boardRect.left + rX + starWidth,
+                        bottom: boardRect.top + rY + starHeight
+                    };
+
+                    let collision = false;
+                    for (const rect of placedRects) {
+                        const buffer = 10;
+                        const buffRect = {
+                            left: rect.left - buffer,
+                            top: rect.top - buffer,
+                            right: rect.right + buffer,
+                            bottom: rect.bottom + buffer
+                        };
+
+                        if (isOverlapping(candidateRect, buffRect)) {
+                            collision = true;
+                            break;
+                        }
+                    }
+
+                    if (!collision) {
+                        star.style.left = `${rX}px`;
+                        star.style.top = `${rY}px`;
+
+                        const rot = Math.floor(Math.random() * 60) - 30;
+                        star.style.transform = `rotate(${rot}deg)`;
+
+                        placed = true;
+                        placedRects.push(candidateRect);
+                        star.style.opacity = '1';
+                    }
+
+                    attempts++;
+                }
+
+                if (!placed) {
+                    star.style.opacity = '0';
+                    console.log('Could not place star', star);
+                }
+            });
+        });
+    </script>
+    <canvas id="ribbon-canvas"></canvas>
+    <script src="js/ribbon.js"></script>
+</body>
+
+</html>
