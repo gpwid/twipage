@@ -215,11 +215,21 @@
                 <input type="file" id="coverFile" accept="image/*" style="font-size:0.9em;">
             </div>
             <div class="form-group">
-                <label>Book File (PDF/EPUB)</label>
+                <label>Book File (PDF/EPUB) <span style="color:#d9534f; font-weight:normal; font-size:0.85em;">Free
+                        Tier Limit: 50MB</span></label>
+
+                <!-- External URL Input -->
+                <input type="text" id="externalBookUrl"
+                    placeholder="Link directly to a large PDF/EPUB (e.g., from Google Drive or Internet Archive)"
+                    style="margin-bottom: 10px; border-color: #00A0DD;">
+
+                <p style="text-align:center; font-size:0.9em; font-weight:600; color:#555; margin-bottom:10px;">-- OR --
+                </p>
+
                 <div class="file-upload-box" style="border-color: #662D91; background: #faf5ff;"
                     onclick="document.getElementById('bookFile').click()">
-                    <span class="file-label" style="color: #662D91;">Click to select book file</span>
-                    <input type="file" id="bookFile" accept=".pdf,.epub" required>
+                    <span class="file-label" style="color: #662D91;">Click to select a file under 50MB</span>
+                    <input type="file" id="bookFile" accept=".pdf,.epub">
                     <div id="bookName" class="file-name-display">No file chosen</div>
                 </div>
             </div>
@@ -327,8 +337,13 @@
                     const desc = document.getElementById('description').value;
                     let finalCoverUrl = document.getElementById('coverUrl').value;
 
+                    let bookUrl = "";
+                    const externalUrlInput = document.getElementById('externalBookUrl').value.trim();
                     const bookFile = bookFileInput.files[0];
-                    if (!bookFile) throw new Error("Please select a Book File.");
+
+                    if (!bookFile && !externalUrlInput) {
+                        throw new Error("Please select a Book File OR provide an External URL.");
+                    }
 
                     // Upload Cover if local file selected
                     const localCoverFile = coverFileInput.files[0];
@@ -346,15 +361,22 @@
                         throw new Error("Please provide a Cover URL or upload a Cover File.");
                     }
 
-                    // Upload Book File
-                    statusMsg.className = 'success';
-                    statusMsg.textContent = 'Uploading PDF/EPUB to Cloud Storage...';
+                    // Process Book File or External URL
+                    if (externalUrlInput) {
+                        statusMsg.className = 'success';
+                        statusMsg.textContent = 'Linking External URL...';
+                        bookUrl = externalUrlInput;
+                    } else {
+                        statusMsg.className = 'success';
+                        statusMsg.textContent = 'Uploading PDF/EPUB to Cloud Storage...';
 
-                    const bookPath = `${Date.now()}_${bookFile.name}`;
-                    const { data: bookData, error: bookError } = await supabase.storage.from('books').upload(`files/${bookPath}`, bookFile);
-                    if (bookError) throw bookError;
+                        const bookPath = `${Date.now()}_${bookFile.name}`;
+                        const { data: bookData, error: bookError } = await supabase.storage.from('books').upload(`files/${bookPath}`, bookFile);
+                        if (bookError) throw bookError;
 
-                    const { data: { publicUrl: bookUrl } } = supabase.storage.from('books').getPublicUrl(`files/${bookPath}`);
+                        const { data: { publicUrl: bUrl } } = supabase.storage.from('books').getPublicUrl(`files/${bookPath}`);
+                        bookUrl = bUrl;
+                    }
 
                     // Save to Supabase Postgres Library table
                     statusMsg.className = 'success';
