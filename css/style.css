@@ -310,25 +310,6 @@ li strong {
     filter: none;
 }
 
-.cutiemark {
-    position: absolute;
-    background: transparent;
-    box-shadow: none;
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    cursor: pointer;
-    filter: drop-shadow(2px 0 0 white) drop-shadow(-2px 0 0 white) drop-shadow(0 2px 0 white) drop-shadow(0 -2px 0 white) drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.3));
-    z-index: 25;
-}
-
-.cutiemark:hover {
-    transform: scale(1.1) rotate(0deg) !important;
-    z-index: 50;
-}
-
-.cm-1 { width: 70px; top: -40px; right: 20px; transform: rotate(20deg); }
-.cm-2 { width: 50px; bottom: 80px; left: -40px; transform: rotate(-15deg); z-index: 30; }
-.cm-3 { width: 40px; top: 250px; right: -30px; transform: rotate(35deg); }
-
 .doodle-arrow {
     position: absolute;
     right: -30px;
@@ -339,6 +320,32 @@ li strong {
     pointer-events: none;
     opacity: 0.8;
 }
+
+/* --- THE BOARD SPECIFIC --- */
+
+
+.brochure-board {
+    position: fixed;
+    width: 170px;
+    bottom: -200px;
+    left: 35%;
+    margin-left: -75px; 
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    transform: rotate(-12deg);
+    z-index: 25;
+}
+
+.brochure-board:hover {
+    transform: translateY(-30px) rotate(2deg) !important;
+}
+
+.brochure-board img {
+    filter: drop-shadow(4px 6px 10px rgba(0, 0, 0, 0.4));
+}
+
+
 
 #ribbon-canvas {
     position: fixed;

@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reader - The Golden Oak Library</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,600;1,400&family=Merriweather:ital,wght@0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+
+    <!-- EPUB.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #fdfdfd;
+            --text-color: #333333;
+            --font-family: 'Merriweather', serif;
+            --font-size: 1.2rem;
+            --line-height: 1.8;
+            --ui-bg: #ffffff;
+            --ui-border: #e0e0e0;
+        }
+
+        /* Themes */
+        body.theme-light {
+            --bg-color: #fdfdfd;
+            --text-color: #333333;
+            --ui-bg: #ffffff;
+            --ui-border: #e0e0e0;
+        }
+
+        body.theme-sepia {
+            --bg-color: #f4ecd8;
+            --text-color: #5b4636;
+            --ui-bg: #eaddc5;
+            --ui-border: #d4c5ab;
+        }
+
+        body.theme-dark {
+            --bg-color: #1a1a1a;
+            --text-color: #d1d1d1;
+            --ui-bg: #222222;
+            --ui-border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Navigation Bar */
+        .reader-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: var(--ui-bg);
+            border-bottom: 1px solid var(--ui-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 100;
+            transform: translateY(0);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .reader-nav.hidden {
+            transform: translateY(-100%);
+        }
+
+        .nav-left,
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn {
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.7;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            opacity: 1;
+            background: rgba(128, 128, 128, 0.1);
+        }
+
+        .book-title-display {
+            font-weight: 600;
+            font-size: 1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 30vw;
+        }
+
+        /* Reading Area */
+        .reader-container {
+            flex-grow: 1;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 80px 30px 80px 30px;
+            font-size: var(--font-size);
+            line-height: var(--line-height);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Iframe for PDFs */
+        .pdf-frame {
+            width: 100%;
+            height: calc(100vh - 60px);
+            /* Fill screen below nav */
+            border: none;
+            margin-top: 60px;
+            /* Push below fixed nav */
+        }
+
+        /* EPUB.js Viewer */
+        #epub-viewer {
+            width: 100%;
+            height: 100%;
+            min-height: calc(100vh - 160px);
+            overflow: hidden;
+        }
+
+        /* Book Content Styling (Fallback/Text) */
+        .reader-content h1 {
+            font-size: 2.2em;
+            margin-bottom: 0.5em;
+            font-weight: 700;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .reader-content h2 {
+            font-size: 1.5em;
+            margin-top: 2em;
+            margin-bottom: 0.8em;
+        }
+
+        .reader-content p {
+            margin-bottom: 1.5em;
+            text-indent: 1.5em;
+        }
+
+        /* UI Controls Panel */
+        .controls-panel {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background-color: var(--ui-bg);
+            border: 1px solid var(--ui-border);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 101;
+            display: none;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 250px;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-color);
+        }
+
+        body.theme-dark .controls-panel {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls-panel.active {
+            display: flex;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+
+        .btn-group {
+            display: flex;
+            background: rgba(128, 128, 128, 0.1);
+            border-radius: 6px;
+            padding: 4px;
+        }
+
+        .btn-group button {
+            flex: 1;
+            padding: 8px;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn-group button.active {
+            background: var(--ui-border);
+            font-weight: 600;
+        }
+
+        .theme-circles {
+            display: flex;
+            gap: 15px;
+            justify-content: space-around;
+        }
+
+        .theme-circle {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .theme-circle.c-light {
+            background: #fdfdfd;
+            border-color: #e0e0e0;
+        }
+
+        .theme-circle.c-sepia {
+            background: #f4ecd8;
+            border-color: #d4c5ab;
+        }
+
+        .theme-circle.c-dark {
+            background: #1a1a1a;
+            border-color: #333333;
+        }
+
+        .theme-circle.active {
+            outline: 2px solid var(--text-color);
+            outline-offset: 2px;
+        }
+
+        /* Error/Loading state */
+        .status-msg {
+            text-align: center;
+            padding: 50px;
+            font-family: 'Inter', sans-serif;
+            opacity: 0.6;
+            margin-top: 100px;
+        }
+
+        @media (max-width: 768px) {
+            .reader-container {
+                padding: 70px 20px 60px 20px;
+                max-width: 100%;
+            }
+
+            .book-title-display {
+                max-width: 50vw;
+            }
+
+            .controls-panel {
+                top: 70px;
+                right: 10px;
+                left: 10px;
+            }
+
+            .reader-content p {
+                text-indent: 1em;
+            }
+        }
+    </style>
+</head>
+
+<body class="theme-light">
+
+    <!-- Nav Bar -->
+    <nav class="reader-nav" id="reader-nav">
+        <div class="nav-left">
+            <a href="library.html" class="btn" title="Back to Library">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
+            <div class="book-title-display" id="nav-title">Loading...</div>
+        </div>
+        <div class="nav-right">
+            <button class="btn" id="settings-btn" title="Reader Settings">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Settings Panel -->
+    <div class="controls-panel" id="controls-panel">
+        <div class="control-group">
+            <label>Theme</label>
+            <div class="theme-circles">
+                <div class="theme-circle c-light active" data-theme="theme-light"></div>
+                <div class="theme-circle c-sepia" data-theme="theme-sepia"></div>
+                <div class="theme-circle c-dark" data-theme="theme-dark"></div>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Font Family</label>
+            <div class="btn-group font-group">
+                <button class="active" data-font="'Merriweather', serif"
+                    style="font-family: 'Merriweather', serif;">Serif</button>
+                <button data-font="'Inter', sans-serif" style="font-family: 'Inter', sans-serif;">Sans</button>
+                <button data-font="'Default', monospace" style="font-family: monospace;">Mono</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Text Size</label>
+            <div class="btn-group size-group">
+                <button id="btn-size-down">A-</button>
+                <button id="btn-size-up">A+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Injection -->
+    <main class="reader-container">
+        <div class="reader-content" id="reader-content">
+            <div class="status-msg">Initializing Reader Engine...</div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { supabase, isConfigured } from './js/supabase-config.js';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const nav = document.getElementById('reader-nav');
+            const settingsBtn = document.getElementById('settings-btn');
+            const controlsPanel = document.getElementById('controls-panel');
+            const contentArea = document.getElementById('reader-content');
+            const navTitle = document.getElementById('nav-title');
+
+            // --- Book Loading Logic ---
+            // Get book ID from URL (e.g., reader.html?id=book-1)
+            const urlParams = new URLSearchParams(window.location.search);
+            const bookId = urlParams.get('id');
+
+            if (!bookId) {
+                contentArea.innerHTML = '<div class="status-msg">No book selected. Return to the <a href="library.html" style="color:var(--text-color);">library</a>.</div>';
+            } else if (!isConfigured) {
+                contentArea.innerHTML = '<div class="status-msg">Supabase not configured. Please review the setup instructions in chat.</div>';
+            } else {
+                loadBookContent(bookId);
+            }
+
+            async function loadBookContent(id) {
+                try {
+                    const { data: book, error } = await supabase
+                        .from('library')
+                        .select('*')
+                        .eq('id', id)
+                        .single();
+
+                    if (error) throw error;
+
+                    if (book) {
+                        navTitle.textContent = book.title;
+                        document.title = `${book.title} - Reader`;
+                        renderBookContent(book);
+                    } else {
+                        contentArea.innerHTML = '<div class="status-msg">Book not found in Cloud Archives.</div>';
+                    }
+                } catch (err) {
+                    console.error('Failed to load library data from Cloud:', err);
+                    contentArea.innerHTML = '<div class="status-msg">Error loading from Supabase Postgres.</div>';
+                }
+            }
+
+            // Global EPUB objects so settings can adjust them
+            let rendition = null;
+
+            function renderBookContent(book) {
+                const url = book.contentUrl;
+
+                // If it's a PDF
+                if (url.toLowerCase().endsWith('.pdf')) {
+                    // Disable themes for PDF
+                    settingsBtn.style.display = 'none';
+                    // Replace container with a full-width iframe
+                    const main = document.querySelector('main');
+                    main.className = '';
+                    main.style.maxWidth = '100%';
+                    main.style.padding = '0';
+                    main.innerHTML = `<iframe src="${url}" class="pdf-frame" title="${book.title}"></iframe>`;
+                    return;
+                }
+
+                // If it's an EPUB
+                if (url.toLowerCase().endsWith('.epub')) {
+                    contentArea.innerHTML = '<div id="epub-viewer"></div>';
+                    const viewer = document.getElementById('epub-viewer');
+
+                    const bookEpub = ePub(url);
+                    rendition = bookEpub.renderTo("epub-viewer", {
+                        width: "100%",
+                        height: "100%",
+                        spread: "none",
+                        manager: "continuous",
+                        flow: "scrolled",
+                    });
+
+                    // Apply current styles to EPUB
+                    applyEpubStyles();
+
+                    rendition.display();
+
+                    // Update styles when reading
+                    bookEpub.ready.then(() => {
+                        console.log("EPUB Ready");
+                    });
+                    return;
+                }
+
+                // Fallback (Not PDF or EPUB)
+                contentArea.innerHTML = `
+                    <div class="status-msg">
+                        <h2>Unsupported Format</h2>
+                        <p>This book format cannot be rendered in the browser.</p>
+                        <a href="${book.downloadUrl}" class="btn" style="background:var(--text-color); color:var(--bg-color); margin-top:20px; display:inline-block; padding:10px 20px;" download>Download File</a>
+                    </div>
+                `;
+            }
+
+            // --- UI Interactions ---
+
+            // Toggle settings panel
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                controlsPanel.classList.toggle('active');
+            });
+
+            // Close settings if clicked outside
+            document.addEventListener('click', (e) => {
+                if (!controlsPanel.contains(e.target) && !settingsBtn.contains(e.target)) {
+                    controlsPanel.classList.remove('active');
+                }
+            });
+
+            // Hide/Show Nav Bar on scroll down/up
+            let lastScroll = 0;
+            window.addEventListener('scroll', () => {
+                const currentScroll = window.pageYOffset;
+                if (currentScroll <= 0) {
+                    nav.classList.remove('hidden');
+                } else if (currentScroll > lastScroll) {
+                    nav.classList.add('hidden'); // Scroll down
+                    controlsPanel.classList.remove('active');
+                } else if (currentScroll < lastScroll - 5) {
+                    nav.classList.remove('hidden'); // Scroll up
+                }
+                lastScroll = currentScroll;
+            });
+
+            // --- Typography & Theme State Management ---
+
+            // Themes
+            const themeCircles = document.querySelectorAll('.theme-circle');
+            themeCircles.forEach(circle => {
+                circle.addEventListener('click', () => {
+                    document.body.className = circle.dataset.theme;
+                    themeCircles.forEach(c => c.classList.remove('active'));
+                    circle.classList.add('active');
+                    // Save preference
+                    localStorage.setItem('reader-theme', circle.dataset.theme);
+                    applyEpubStyles(); // Update EPUB if open
+                });
+            });
+
+            // Fonts
+            const fontBtns = document.querySelectorAll('.font-group button');
+            fontBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.documentElement.style.setProperty('--font-family', btn.dataset.font);
+                    fontBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    localStorage.setItem('reader-font', btn.dataset.font);
+                    applyEpubStyles(); // Update EPUB if open
+                });
+            });
+
+            // Font Size
+            let currentSize = 1.2;
+            document.getElementById('btn-size-up').addEventListener('click', () => {
+                if (currentSize < 2.5) currentSize += 0.1;
+                updateFontSize();
+            });
+            document.getElementById('btn-size-down').addEventListener('click', () => {
+                if (currentSize > 0.8) currentSize -= 0.1;
+                updateFontSize();
+            });
+
+            function updateFontSize() {
+                document.documentElement.style.setProperty('--font-size', `${currentSize}rem`);
+                localStorage.setItem('reader-size', currentSize);
+                applyEpubStyles();
+            }
+
+            function applyEpubStyles() {
+                if (!rendition) return;
+
+                // Map CSS variables to EPUB iframe
+                const styleObj = getComputedStyle(document.body);
+                const bgColor = styleObj.getPropertyValue('--bg-color').trim();
+                const textColor = styleObj.getPropertyValue('--text-color').trim();
+                const fontFamily = styleObj.getPropertyValue('--font-family').trim();
+
+                rendition.themes.default({
+                    "body": {
+                        "background": bgColor,
+                        "color": textColor,
+                        "font-family": fontFamily + " !important",
+                        "font-size": `${currentSize}rem !important`,
+                        "line-height": "1.8 !important",
+                        "padding": "0 !important"
+                    },
+                    "p": {
+                        "font-family": fontFamily + " !important",
+                        "font-size": `${currentSize}rem !important`,
+                        "line-height": "1.8 !important",
+                        "color": textColor + " !important"
+                    },
+                    "h1, h2, h3, h4": {
+                        "color": textColor + " !important",
+                        "font-family": fontFamily + " !important"
+                    }
+                });
+            }
+
+            // Restore preferences on load
+            const savedTheme = localStorage.getItem('reader-theme');
+            if (savedTheme) {
+                document.body.className = savedTheme;
+                themeCircles.forEach(c => c.classList.remove('active'));
+                const c = document.querySelector(`.theme-circle[data-theme="${savedTheme}"]`);
+                if (c) c.classList.add('active');
+            }
+
+            const savedFont = localStorage.getItem('reader-font');
+            if (savedFont) {
+                document.documentElement.style.setProperty('--font-family', savedFont);
+                fontBtns.forEach(b => b.classList.remove('active'));
+                const b = document.querySelector(`.font-group button[data-font="${savedFont}"]`);
+                if (b) b.classList.add('active');
+            }
+
+            const savedSize = localStorage.getItem('reader-size');
+            if (savedSize) {
+                currentSize = parseFloat(savedSize);
+                updateFontSize();
+            }
+        });
+    </script>
+</body>
+
+</html>

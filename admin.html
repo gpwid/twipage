@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library CMS - Golden Oak Cloud</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,600&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc;
+            color: #333;
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .admin-container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            color: #662D91;
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-upload-box {
+            border: 2px dashed #00A0DD;
+            padding: 20px;
+            text-align: center;
+            border-radius: 6px;
+            background: #f0faff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .file-upload-box:hover {
+            background: #e6f7ff;
+        }
+
+        .file-upload-box input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            color: #00A0DD;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .file-name-display {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+            word-break: break-all;
+        }
+
+        .submit-btn {
+            background: #040045;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover {
+            background: #662D91;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        #status-message {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 500;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            display: block !important;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block !important;
+        }
+
+        .nav-link {
+            display: inline-block;
+            text-align: center;
+            margin-top: 0;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- LOGIN SCREEN -->
+    <div class="admin-container" id="login-container">
+        <h1>Admin Login</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="login-email" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" required>
+            </div>
+            <button type="submit" class="submit-btn" id="loginBtn">Log In</button>
+            <div id="login-error" class="error" style="display:none; margin-top:10px; padding:10px;"></div>
+        </form>
+    </div>
+
+    <!-- UPLOAD SCREEN -->
+    <div class="admin-container" id="upload-container" style="display: none;">
+        <h1>Add Book to Cloud Library</h1>
+
+        <!-- Smart Fetch Google Books API -->
+        <div
+            style="background: #f0faff; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #cce5ff;">
+            <label style="color: #0056b3; margin-bottom: 10px; display: block;">Auto-Fetch Metadata (Google
+                Books)</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="search-title" placeholder="Enter book title (e.g., Harry Potter)..."
+                    style="flex:1;">
+                <button type="button" id="search-btn"
+                    style="padding: 10px 15px; background: #00A0DD; color: white; border: none; border-radius: 4px; cursor: pointer;">Search</button>
+            </div>
+            <div id="search-status" style="font-size: 0.9em; color: #666; margin-top: 10px;"></div>
+        </div>
+
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="title">Book Title</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="author">Author</label>
+                <input type="text" id="author" name="author" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Preface / Description</label>
+                <textarea id="description" name="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="coverUrl">Cover Image URL (Auto-filled or manual)</label>
+                <input type="text" id="coverUrl" name="coverUrl" placeholder="https://..." required>
+                <p style="font-size:0.8em; color:#666; margin-top:5px; margin-bottom:5px;">Or upload a custom cover
+                    below:</p>
+                <input type="file" id="coverFile" accept="image/*" style="font-size:0.9em;">
+            </div>
+            <div class="form-group">
+                <label>Book File (PDF/EPUB)</label>
+                <div class="file-upload-box" style="border-color: #662D91; background: #faf5ff;"
+                    onclick="document.getElementById('bookFile').click()">
+                    <span class="file-label" style="color: #662D91;">Click to select book file</span>
+                    <input type="file" id="bookFile" accept=".pdf,.epub" required>
+                    <div id="bookName" class="file-name-display">No file chosen</div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">Catalog Cloud Book</button>
+            <div id="status-message"></div>
+        </form>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+            <button id="logoutBtn"
+                style="background: transparent; border: none; color: #d9534f; cursor: pointer; text-decoration: underline; padding:0; font-size:1rem;">Log
+                out</button>
+            <a href="library.html" class="nav-link">← Return to Library</a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { supabase, isConfigured } from './js/supabase-config.js';
+
+        // UI Elements
+        const loginContainer = document.getElementById('login-container');
+        const uploadContainer = document.getElementById('upload-container');
+        const bookFileInput = document.getElementById('bookFile');
+        const bookNameDisplay = document.getElementById('bookName');
+        const coverFileInput = document.getElementById('coverFile');
+        const coverUrlInput = document.getElementById('coverUrl');
+
+        // File Selection listeners
+        bookFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) bookNameDisplay.textContent = e.target.files[0].name;
+            else bookNameDisplay.textContent = "No file chosen";
+        });
+
+        coverFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) coverUrlInput.value = "(Local File Selected)";
+        });
+
+        // Initialize Supabase
+        if (!isConfigured) {
+            loginContainer.innerHTML = '<h2>Supabase Not Configured</h2><p>Please provide me (Antigravity) with your Supabase URL and Anon Key in the chat, and I will inject them here!</p>';
+        } else {
+            // Check initial auth state
+            supabase.auth.getSession().then(({ data: { session } }) => {
+                if (session) {
+                    loginContainer.style.display = 'none';
+                    uploadContainer.style.display = 'block';
+                } else {
+                    loginContainer.style.display = 'block';
+                    uploadContainer.style.display = 'none';
+                }
+            });
+
+            // Auth State Listener
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (session) {
+                    loginContainer.style.display = 'none';
+                    uploadContainer.style.display = 'block';
+                } else {
+                    loginContainer.style.display = 'block';
+                    uploadContainer.style.display = 'none';
+                }
+            });
+
+            // Login Route
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const email = document.getElementById('login-email').value;
+                const pass = document.getElementById('login-password').value;
+                const errDiv = document.getElementById('login-error');
+                const btn = document.getElementById('loginBtn');
+
+                btn.textContent = "Logging in...";
+                btn.disabled = true;
+                try {
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                    if (error) throw error;
+                    errDiv.style.display = 'none';
+                } catch (error) {
+                    errDiv.textContent = error.message;
+                    errDiv.style.display = 'block';
+                } finally {
+                    btn.textContent = "Log In";
+                    btn.disabled = false;
+                }
+            });
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', async () => {
+                await supabase.auth.signOut();
+            });
+
+            // Upload Route
+            document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const submitBtn = document.getElementById('submitBtn');
+                const statusMsg = document.getElementById('status-message');
+                submitBtn.textContent = 'Uploading to Cloud...';
+                submitBtn.disabled = true;
+                statusMsg.className = '';
+                statusMsg.textContent = '';
+
+                try {
+                    const title = document.getElementById('title').value;
+                    const author = document.getElementById('author').value;
+                    const desc = document.getElementById('description').value;
+                    let finalCoverUrl = document.getElementById('coverUrl').value;
+
+                    const bookFile = bookFileInput.files[0];
+                    if (!bookFile) throw new Error("Please select a Book File.");
+
+                    // Upload Cover if local file selected
+                    const localCoverFile = coverFileInput.files[0];
+                    if (localCoverFile) {
+                        statusMsg.className = 'success';
+                        statusMsg.textContent = 'Uploading Cover Image...';
+
+                        const coverPath = `${Date.now()}_${localCoverFile.name}`;
+                        const { data: coverData, error: coverError } = await supabase.storage.from('books').upload(`covers/${coverPath}`, localCoverFile);
+                        if (coverError) throw coverError;
+
+                        const { data: { publicUrl: coverUrl } } = supabase.storage.from('books').getPublicUrl(`covers/${coverPath}`);
+                        finalCoverUrl = coverUrl;
+                    } else if (finalCoverUrl === "(Local File Selected)" || !finalCoverUrl) {
+                        throw new Error("Please provide a Cover URL or upload a Cover File.");
+                    }
+
+                    // Upload Book File
+                    statusMsg.className = 'success';
+                    statusMsg.textContent = 'Uploading PDF/EPUB to Cloud Storage...';
+
+                    const bookPath = `${Date.now()}_${bookFile.name}`;
+                    const { data: bookData, error: bookError } = await supabase.storage.from('books').upload(`files/${bookPath}`, bookFile);
+                    if (bookError) throw bookError;
+
+                    const { data: { publicUrl: bookUrl } } = supabase.storage.from('books').getPublicUrl(`files/${bookPath}`);
+
+                    // Save to Supabase Postgres Library table
+                    statusMsg.className = 'success';
+                    statusMsg.textContent = 'Saving Library Metadata...';
+
+                    const { error: dbError } = await supabase.from('library').insert([{
+                        title: title,
+                        author: author,
+                        description: desc,
+                        coverImage: finalCoverUrl,
+                        contentUrl: bookUrl,
+                        downloadUrl: bookUrl
+                    }]);
+                    if (dbError) throw dbError;
+
+                    statusMsg.className = 'success';
+                    statusMsg.textContent = '✅ Book securely published to Cloud Library!';
+                    e.target.reset();
+                    bookNameDisplay.textContent = 'No file chosen';
+                } catch (error) {
+                    console.error('Upload Error:', error);
+                    statusMsg.className = 'error';
+                    statusMsg.textContent = error.message;
+                } finally {
+                    submitBtn.textContent = 'Catalog Cloud Book';
+                    submitBtn.disabled = false;
+                }
+            });
+        }
+
+        // Google Books API Auto-Fetch
+        document.getElementById('search-btn').addEventListener('click', async () => {
+            const query = document.getElementById('search-title').value.trim();
+            const statusDiv = document.getElementById('search-status');
+            if (!query) {
+                statusDiv.textContent = "Please enter a title to search.";
+                return;
+            }
+
+            statusDiv.textContent = "Searching Google Books...";
+            statusDiv.style.color = "#666";
+            try {
+                const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=intitle:${encodeURIComponent(query)}&maxResults=1`);
+                const data = await res.json();
+
+                if (data.items && data.items.length > 0) {
+                    const book = data.items[0].volumeInfo;
+                    document.getElementById('title').value = book.title || query;
+                    document.getElementById('author').value = book.authors ? book.authors.join(", ") : "Unknown Author";
+                    document.getElementById('description').value = book.description || "No description available.";
+
+                    // Prefer high resolution cover if possible
+                    let cover = "";
+                    if (book.imageLinks) {
+                        cover = book.imageLinks.thumbnail || book.imageLinks.smallThumbnail;
+                        cover = cover.replace('http:', 'https:'); // Ensure secure
+                    }
+                    document.getElementById('coverUrl').value = cover || "No cover found";
+
+                    statusDiv.textContent = `✅ Auto-filled details for: "${book.title}"`;
+                    statusDiv.style.color = "green";
+                } else {
+                    statusDiv.textContent = "No matches found. Please enter details manually.";
+                    statusDiv.style.color = "red";
+                }
+            } catch (error) {
+                statusDiv.textContent = "Error fetching from Google Books.";
+                statusDiv.style.color = "red";
+            }
+        });
+    </script>
+</body>
+
+</html>
