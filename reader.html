@@ -144,12 +144,24 @@
             /* Push below fixed nav */
         }
 
+        .reader-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
         /* EPUB.js Viewer */
         #epub-viewer {
             width: 100%;
-            height: 100%;
-            min-height: calc(100vh - 160px);
-            overflow: hidden;
+            flex-grow: 1;
+            height: calc(100vh - 60px);
+            /* Fill the screen minus the navbar */
+            overflow-y: auto;
+            /* Allow vertical scrolling */
+            overflow-x: hidden;
+            padding-bottom: 50px;
+            /* Space at the bottom */
         }
 
         /* Book Content Styling (Fallback/Text) */
@@ -316,6 +328,22 @@
             <div class="book-title-display" id="nav-title">Loading...</div>
         </div>
         <div class="nav-right">
+            <!-- EPUB Navigation Controls (Hidden by default, shown when EPUB loads) -->
+            <div id="epub-nav-controls" style="display: none; align-items: center; gap: 5px;">
+                <button class="btn" id="prev-btn" title="Previous Page/Chapter">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                </button>
+                <button class="btn" id="next-btn" title="Next Page/Chapter">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                    </svg>
+                </button>
+            </div>
+
             <button class="btn" id="settings-btn" title="Reader Settings">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -438,21 +466,49 @@
                     const bookEpub = ePub(url);
                     rendition = bookEpub.renderTo("epub-viewer", {
                         width: "100%",
-                        height: "100%",
+                        height: "100%", // Fill the container
                         spread: "none",
                         manager: "continuous",
-                        flow: "scrolled",
+                        flow: "scrolled-doc", // Scroll entire chapters natively
+                        allowScriptedContent: true
                     });
 
                     // Apply current styles to EPUB
                     applyEpubStyles();
 
+                    // Render the book
                     rendition.display();
+
+                    // Show pagination controls
+                    document.getElementById('epub-nav-controls').style.display = 'flex';
+
+                    // Bind pagination logic
+                    document.getElementById('next-btn').addEventListener('click', () => {
+                        rendition.next();
+                        window.scrollTo(0, 0);
+                    });
+                    document.getElementById('prev-btn').addEventListener('click', () => {
+                        rendition.prev();
+                        window.scrollTo(0, 0);
+                    });
 
                     // Update styles when reading
                     bookEpub.ready.then(() => {
                         console.log("EPUB Ready");
                     });
+
+                    // Arrow key navigation (parent window)
+                    document.addEventListener('keyup', (e) => {
+                        if ((e.keyCode || e.which) == 37) { rendition.prev(); } // Left Arrow
+                        if ((e.keyCode || e.which) == 39) { rendition.next(); } // Right Arrow
+                    }, false);
+
+                    // Add keyboard listeners to the iframe content once it loads
+                    rendition.on("keyup", (event) => {
+                        if ((event.keyCode || event.which) == 37) { rendition.prev(); }
+                        if ((event.keyCode || event.which) == 39) { rendition.next(); }
+                    });
+
                     return;
                 }
 
