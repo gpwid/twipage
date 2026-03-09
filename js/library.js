@@ -1,7 +1,5 @@
 // The Golden Oak Library - Logic
 
-import { supabase, isConfigured } from './supabase-config.js';
-
 document.addEventListener('DOMContentLoaded', async () => {
     const bookshelfArea = document.getElementById('bookshelf-area');
     const searchInput = document.getElementById('book-search');
@@ -33,14 +31,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         return array;
     }
 
-    if (!isConfigured) {
+    if (!window.isConfigured) {
         searchStats.innerHTML = `<span style="color:red">Supabase Not Configured! Please review the chat instructions to set up your database.</span>`;
         return;
     }
 
     // Fetch the book data from Supabase Postgres
     try {
-        const { data: books, error } = await supabase
+        const { data: books, error } = await window.supabaseClient
             .from('library')
             .select('*')
             .order('created_at', { ascending: false });

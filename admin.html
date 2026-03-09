@@ -246,8 +246,11 @@
         </div>
     </div>
 
-    <script type="module">
-        import { supabase, isConfigured } from './js/supabase-config.js';
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        const sbClient = window.supabaseClient;
+        const configStatus = window.isConfigured;
 
         // UI Elements
         const loginContainer = document.getElementById('login-container');
@@ -268,11 +271,11 @@
         });
 
         // Initialize Supabase
-        if (!isConfigured) {
+        if (!configStatus) {
             loginContainer.innerHTML = '<h2>Supabase Not Configured</h2><p>Please provide me (Antigravity) with your Supabase URL and Anon Key in the chat, and I will inject them here!</p>';
         } else {
             // Check initial auth state
-            supabase.auth.getSession().then(({ data: { session } }) => {
+            sbClient.auth.getSession().then(({ data: { session } }) => {
                 if (session) {
                     loginContainer.style.display = 'none';
                     uploadContainer.style.display = 'block';
@@ -283,7 +286,7 @@
             });
 
             // Auth State Listener
-            supabase.auth.onAuthStateChange((event, session) => {
+            sbClient.auth.onAuthStateChange((event, session) => {
                 if (session) {
                     loginContainer.style.display = 'none';
                     uploadContainer.style.display = 'block';
@@ -304,7 +307,7 @@
                 btn.textContent = "Logging in...";
                 btn.disabled = true;
                 try {
-                    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+                    const { data, error } = await sbClient.auth.signInWithPassword({ email, password: pass });
                     if (error) throw error;
                     errDiv.style.display = 'none';
                 } catch (error) {
@@ -318,7 +321,7 @@
 
             // Logout
             document.getElementById('logoutBtn').addEventListener('click', async () => {
-                await supabase.auth.signOut();
+                await sbClient.auth.signOut();
             });
 
             // Upload Route
@@ -352,10 +355,10 @@
                         statusMsg.textContent = 'Uploading Cover Image...';
 
                         const coverPath = `${Date.now()}_${localCoverFile.name}`;
-                        const { data: coverData, error: coverError } = await supabase.storage.from('books').upload(`covers/${coverPath}`, localCoverFile);
+                        const { data: coverData, error: coverError } = await sbClient.storage.from('books').upload(`covers/${coverPath}`, localCoverFile);
                         if (coverError) throw coverError;
 
-                        const { data: { publicUrl: coverUrl } } = supabase.storage.from('books').getPublicUrl(`covers/${coverPath}`);
+                        const { data: { publicUrl: coverUrl } } = sbClient.storage.from('books').getPublicUrl(`covers/${coverPath}`);
                         finalCoverUrl = coverUrl;
                     } else if (finalCoverUrl === "(Local File Selected)" || !finalCoverUrl) {
                         throw new Error("Please provide a Cover URL or upload a Cover File.");
@@ -371,10 +374,10 @@
                         statusMsg.textContent = 'Uploading PDF/EPUB to Cloud Storage...';
 
                         const bookPath = `${Date.now()}_${bookFile.name}`;
-                        const { data: bookData, error: bookError } = await supabase.storage.from('books').upload(`files/${bookPath}`, bookFile);
+                        const { data: bookData, error: bookError } = await sbClient.storage.from('books').upload(`files/${bookPath}`, bookFile);
                         if (bookError) throw bookError;
 
-                        const { data: { publicUrl: bUrl } } = supabase.storage.from('books').getPublicUrl(`files/${bookPath}`);
+                        const { data: { publicUrl: bUrl } } = sbClient.storage.from('books').getPublicUrl(`files/${bookPath}`);
                         bookUrl = bUrl;
                     }
 
@@ -382,7 +385,7 @@
                     statusMsg.className = 'success';
                     statusMsg.textContent = 'Saving Library Metadata...';
 
-                    const { error: dbError } = await supabase.from('library').insert([{
+                    const { error: dbError } = await sbClient.from('library').insert([{
                         title: title,
                         author: author,
                         description: desc,

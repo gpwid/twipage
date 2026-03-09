@@ -144,6 +144,33 @@
             /* Push below fixed nav */
         }
 
+        /* Progress Bar */
+        .progress-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(128, 128, 128, 0.2);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--text-color);
+            transition: width 0.3s ease;
+        }
+
+        .chapter-title-display {
+            font-size: 0.8rem;
+            opacity: 0.6;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 30vw;
+        }
+
         .reader-content {
             flex-grow: 1;
             display: flex;
@@ -157,11 +184,9 @@
             flex-grow: 1;
             height: calc(100vh - 60px);
             /* Fill the screen minus the navbar */
-            overflow-y: auto;
-            /* Allow vertical scrolling */
-            overflow-x: hidden;
-            padding-bottom: 50px;
-            /* Space at the bottom */
+            overflow: hidden;
+            /* Prevent double scrollbar, let iframe handle it natively */
+            padding-bottom: 20px;
         }
 
         /* Book Content Styling (Fallback/Text) */
@@ -291,6 +316,93 @@
             margin-top: 100px;
         }
 
+        /* Twilight Sparkle Info Tip */
+        .twilight-tip {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 290px;
+            background: #c399f4;
+            /* Soft twilight purple */
+            border: 2px solid #8B5FBF;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 25px rgba(139, 95, 191, 0.25);
+            z-index: 1000;
+            font-family: 'Inter', sans-serif;
+            color: #331A52;
+            /* Deep purple text */
+            animation: tipBounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: none;
+            /* Hidden by default */
+        }
+
+        .twilight-tip.active {
+            display: block;
+        }
+
+        .tip-avatar-placeholder {
+            position: absolute;
+            top: -25px;
+            right: -25px;
+            width: 65px;
+            height: 65px;
+            background: #D4C3F0;
+            border: 3px solid #8B5FBF;
+            border-radius: 50%;
+            background-image: url('assets/scitwiemoji.jpeg');
+            background-size: 135%;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tip-content h4 {
+            margin-bottom: 8px;
+            color: #633394;
+            font-size: 1.05rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .tip-content p {
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin-bottom: 12px;
+            text-indent: 0 !important;
+        }
+
+        #close-tip-btn {
+            background: #8B5FBF;
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+
+        #close-tip-btn:hover {
+            background: #633394;
+        }
+
+        @keyframes tipBounceIn {
+            0% {
+                transform: scale(0.8) translateY(-20px);
+                opacity: 0;
+            }
+
+            100% {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
+        }
+
         @media (max-width: 768px) {
             .reader-container {
                 padding: 70px 20px 60px 20px;
@@ -310,6 +422,13 @@
             .reader-content p {
                 text-indent: 1em;
             }
+
+            .twilight-tip {
+                top: 70px;
+                right: 20px;
+                left: 20px;
+                width: auto;
+            }
         }
     </style>
 </head>
@@ -325,7 +444,13 @@
                     <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
             </a>
-            <div class="book-title-display" id="nav-title">Loading...</div>
+            <div style="display: flex; flex-direction: column;">
+                <div class="book-title-display" id="nav-title">Loading...</div>
+                <div class="chapter-title-display" id="chapter-title"></div>
+            </div>
+        </div>
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="progress-bar" id="progress-bar"></div>
         </div>
         <div class="nav-right">
             <!-- EPUB Navigation Controls (Hidden by default, shown when EPUB loads) -->
@@ -393,8 +518,26 @@
         </div>
     </main>
 
-    <script type="module">
-        import { supabase, isConfigured } from './js/supabase-config.js';
+    <!-- Twilight Info Tip -->
+    <div id="twilight-tip" class="twilight-tip">
+        <div class="tip-avatar-placeholder" id="tip-avatar"></div>
+        <div class="tip-content">
+            <h4>
+                <img src="assets/cutiemark.svg" alt="Cutie Mark" width="20" height="20" style="margin-right: 4px;">
+                Librarian's Note
+            </h4>
+            <p>Welcome to the reader! Use the <strong>&lt;</strong> and <strong>&gt;</strong> buttons in the top right
+                corner to flip the chapters once you reach the bottom of the page.</p>
+            <button id="close-tip-btn">Got it, thanks!</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        // Use the globally exposed window.supabaseClient from supabase-config.js
+        const sbClient = window.supabaseClient;
+        const configStatus = window.isConfigured;
 
         document.addEventListener('DOMContentLoaded', () => {
             const nav = document.getElementById('reader-nav');
@@ -410,7 +553,7 @@
 
             if (!bookId) {
                 contentArea.innerHTML = '<div class="status-msg">No book selected. Return to the <a href="library.html" style="color:var(--text-color);">library</a>.</div>';
-            } else if (!isConfigured) {
+            } else if (!configStatus) {
                 contentArea.innerHTML = '<div class="status-msg">Supabase not configured. Please review the setup instructions in chat.</div>';
             } else {
                 loadBookContent(bookId);
@@ -418,7 +561,7 @@
 
             async function loadBookContent(id) {
                 try {
-                    const { data: book, error } = await supabase
+                    const { data: book, error } = await sbClient
                         .from('library')
                         .select('*')
                         .eq('id', id)
@@ -460,7 +603,13 @@
 
                 // If it's an EPUB
                 if (url.toLowerCase().endsWith('.epub')) {
-                    contentArea.innerHTML = '<div id="epub-viewer"></div>';
+                    contentArea.innerHTML = `
+                        <div id="epub-loading" class="status-msg" style="margin-top: 150px;">
+                            <h2>Opening Book...</h2>
+                            <p id="loading-subtext">Unpacking chapters and preparing the reader engine</p>
+                        </div>
+                        <div id="epub-viewer" style="opacity: 0; transition: opacity 0.5s ease;"></div>
+                    `;
                     const viewer = document.getElementById('epub-viewer');
 
                     const bookEpub = ePub(url);
@@ -468,16 +617,26 @@
                         width: "100%",
                         height: "100%", // Fill the container
                         spread: "none",
-                        manager: "continuous",
-                        flow: "scrolled-doc", // Scroll entire chapters natively
+                        flow: "scrolled", // Flawless single-chapter native scrolling
                         allowScriptedContent: true
                     });
 
                     // Apply current styles to EPUB
                     applyEpubStyles();
 
-                    // Render the book
-                    rendition.display();
+                    // Render the book and hide loading screen
+                    rendition.display().then(() => {
+                        document.getElementById('epub-loading').style.display = 'none';
+                        document.getElementById('epub-viewer').style.opacity = '1';
+
+                        // Show Twilight Tip if first time
+                        if (!localStorage.getItem('twilight_reader_tip_shown')) {
+                            // Slight delay so it pops in after the book fades in
+                            setTimeout(() => {
+                                document.getElementById('twilight-tip').classList.add('active');
+                            }, 800);
+                        }
+                    });
 
                     // Show pagination controls
                     document.getElementById('epub-nav-controls').style.display = 'flex';
@@ -492,9 +651,48 @@
                         window.scrollTo(0, 0);
                     });
 
-                    // Update styles when reading
+                    // Generate Locations for Progress Bar (can take a moment on large books)
                     bookEpub.ready.then(() => {
-                        console.log("EPUB Ready");
+                        console.log("EPUB Ready - Generating locations for progress...");
+                        const subtext = document.getElementById('loading-subtext');
+                        if (subtext) subtext.textContent = "Calculating reading progress metrics...";
+
+                        return bookEpub.locations.generate(1600); // 1600 chars per "page"
+                    }).then((locations) => {
+                        console.log("Locations generated. Book size:", locations.length);
+                        document.getElementById('progress-container').style.display = 'block';
+
+                        // Force a refresh of the relocated event to show initial progress
+                        const currentLocation = rendition.currentLocation();
+                        if (currentLocation && currentLocation.start) {
+                            rendition.emit("relocated", currentLocation);
+                        }
+                    });
+
+                    // Track current location and update progress + chapter title
+                    rendition.on("relocated", function (location) {
+                        if (!location || !location.start || !location.start.cfi) return;
+
+                        // Update Chapter Title and Page Numbers
+                        const chapterTitleEl = document.getElementById('chapter-title');
+                        const navItem = bookEpub.navigation.get(location.start.href);
+                        const chapterText = navItem ? navItem.label.trim() : "";
+
+                        const currentPercentage = bookEpub.locations.percentageFromCfi(location.start.cfi);
+
+                        if (currentPercentage >= 0) {
+                            const percentStr = Math.round(currentPercentage * 100) + "%";
+
+                            // Display Percentage next to Chapter 
+                            chapterTitleEl.textContent = chapterText ? `${chapterText} • ${percentStr} Read` : `${percentStr} Read`;
+
+                            // Update Progress Bar
+                            const progressBar = document.getElementById('progress-bar');
+                            progressBar.style.width = percentStr;
+                            progressBar.title = `${percentStr} completed`;
+                        } else {
+                            chapterTitleEl.textContent = chapterText;
+                        }
                     });
 
                     // Arrow key navigation (parent window)
@@ -546,10 +744,19 @@
                 } else if (currentScroll > lastScroll) {
                     nav.classList.add('hidden'); // Scroll down
                     controlsPanel.classList.remove('active');
+                    // Hide the tip if they scroll
+                    document.getElementById('twilight-tip').classList.remove('active');
                 } else if (currentScroll < lastScroll - 5) {
                     nav.classList.remove('hidden'); // Scroll up
                 }
                 lastScroll = currentScroll;
+            });
+
+            // Twilight Tip Logic
+            const twilightTip = document.getElementById('twilight-tip');
+            document.getElementById('close-tip-btn').addEventListener('click', () => {
+                twilightTip.classList.remove('active');
+                localStorage.setItem('twilight_reader_tip_shown', 'true');
             });
 
             // --- Typography & Theme State Management ---
@@ -612,7 +819,18 @@
                         "font-family": fontFamily + " !important",
                         "font-size": `${currentSize}rem !important`,
                         "line-height": "1.8 !important",
-                        "padding": "0 !important"
+                        "padding": "0 10px !important"
+                    },
+                    "::-webkit-scrollbar": {
+                        "width": "10px",
+                        "background": bgColor
+                    },
+                    "::-webkit-scrollbar-thumb": {
+                        "background": "rgba(128, 128, 128, 0.3)",
+                        "border-radius": "5px"
+                    },
+                    "::-webkit-scrollbar-thumb:hover": {
+                        "background": "rgba(128, 128, 128, 0.5)"
                     },
                     "p": {
                         "font-family": fontFamily + " !important",
